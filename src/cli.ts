@@ -41,6 +41,8 @@ program
     'set margin around PDF file',
     generatePuppeteerPDFMargin,
   )
+  .option('--username <username>', 'set username when URL requires login')
+  .option('--password <password>', 'set password when URL requires login')
   .option('--pdfFormat <format>', 'pdf format ex: A3, A4...')
   .option('--coverTitle <title>', 'title for PDF cover')
   .option('--coverImage <src>', 'image for PDF cover. *.svg file not working!')

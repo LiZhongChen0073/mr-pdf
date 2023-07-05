@@ -21,6 +21,8 @@ export interface generatePDFOptions {
   waitForRender: number;
   headerTemplate: string;
   footerTemplate: string;
+  username: string;
+  password: string;
 }
 
 export async function generatePDF({
@@ -41,31 +43,47 @@ export async function generatePDF({
   waitForRender,
   headerTemplate,
   footerTemplate,
+  username,
+  password,
 }: generatePDFOptions): Promise<void> {
   const browser = await puppeteer.launch({ args: puppeteerArgs });
   const page = await browser.newPage();
 
+  const auth =
+    'Basic ' + Buffer.from(username + ':' + password).toString('base64');
+  console.log(auth);
+  // await page.setExtraHTTPHeaders({ 'Authorization': auth })
   for (const url of initialDocURLs) {
     let nextPageURL = url;
 
     // Create a list of HTML for the content section of all pages by looping
     while (nextPageURL) {
-      console.log();
       console.log(chalk.cyan(`Retrieving html from ${nextPageURL}`));
-      console.log();
 
       if (waitForRender) {
-        await page.goto(`${nextPageURL}`);
+        await page.setExtraHTTPHeaders({ Authorization: auth });
+        const response = await page.goto(`${nextPageURL}`, {
+          waitUntil: 'networkidle0',
+        });
+        if (response) {
+          console.log(response.status());
+        }
         console.log(chalk.green('Rendering...'));
         await page.waitFor(waitForRender);
       } else {
         // Go to the page specified by nextPageURL
-        await page.goto(`${nextPageURL}`, {
+        await page.setExtraHTTPHeaders({ Authorization: auth });
+        const response = await page.goto(`${nextPageURL}`, {
           waitUntil: 'networkidle0',
           timeout: 0,
         });
+        if (response) {
+          console.log(response.status());
+        }
       }
 
+      const content = await page.content();
+      console.log('content', content);
       // Get the HTML string of the content section.
       const html = await page.evaluate(
         ({ contentSelector }) => {
