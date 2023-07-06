@@ -49,41 +49,20 @@ export async function generatePDF({
   const browser = await puppeteer.launch({ args: puppeteerArgs });
   const page = await browser.newPage();
 
-  const auth =
-    'Basic ' + Buffer.from(username + ':' + password).toString('base64');
-  console.log(auth);
-  // await page.setExtraHTTPHeaders({ 'Authorization': auth })
   for (const url of initialDocURLs) {
     let nextPageURL = url;
 
     // Create a list of HTML for the content section of all pages by looping
     while (nextPageURL) {
       console.log(chalk.cyan(`Retrieving html from ${nextPageURL}`));
-
-      if (waitForRender) {
-        await page.setExtraHTTPHeaders({ Authorization: auth });
-        const response = await page.goto(`${nextPageURL}`, {
-          waitUntil: 'networkidle0',
-        });
-        if (response) {
-          console.log(response.status());
-        }
-        console.log(chalk.green('Rendering...'));
-        await page.waitFor(waitForRender);
-      } else {
-        // Go to the page specified by nextPageURL
-        await page.setExtraHTTPHeaders({ Authorization: auth });
-        const response = await page.goto(`${nextPageURL}`, {
-          waitUntil: 'networkidle0',
-          timeout: 0,
-        });
-        if (response) {
-          console.log(response.status());
-        }
+      await login(page, username, password)
+      const response = await page.goto(`${nextPageURL}`, {
+        waitUntil: 'networkidle0',
+        timeout: 0,
+      });
+      if (response) {
+        console.log(response.status());
       }
-
-      const content = await page.content();
-      console.log('content', content);
       // Get the HTML string of the content section.
       const html = await page.evaluate(
         ({ contentSelector }) => {
@@ -137,44 +116,18 @@ export async function generatePDF({
   }
 
   // Go to initial page
+  await login(page, username, password)
   await page.goto(`${initialDocURLs[0]}`, { waitUntil: 'networkidle0' });
-
-  const coverHTML = `
-  <div
-    class="pdf-cover"
-    style="
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      page-break-after: always;  
-      text-align: center;
-    "
-  >
-    ${coverTitle ? `<h1>${coverTitle}</h1>` : ''}
-    ${coverSub ? `<h3>${coverSub}</h3>` : ''}
-    <img
-      class="cover-img"
-      src="data:image/png;base64, ${imgBase64}"
-      alt=""
-      width="140"
-      height="140"
-    />
-  </div>`;
 
   // Add Toc
   const { modifiedContentHTML, tocHTML } = generateToc(contentHTML);
 
   // Restructuring the html of a document
   await page.evaluate(
-    ({ coverHTML, tocHTML, modifiedContentHTML, disableTOC }) => {
+    ({ tocHTML, modifiedContentHTML, disableTOC }) => {
       // Empty body content
       const body = document.body;
       body.innerHTML = '';
-
-      // Add Cover
-      body.innerHTML += coverHTML;
 
       // Add toc
       if (!disableTOC) body.innerHTML += tocHTML;
@@ -182,7 +135,7 @@ export async function generatePDF({
       // Add body content
       body.innerHTML += modifiedContentHTML;
     },
-    { coverHTML, tocHTML, modifiedContentHTML, disableTOC },
+    { tocHTML, modifiedContentHTML, disableTOC },
   );
 
   // Remove unnecessary HTML by using excludeSelectors
@@ -236,9 +189,8 @@ function generateToc(contentHtml: string) {
       .replace(/<[^>]*>/g, '')
       .trim();
 
-    const headerId = `${Math.random().toString(36).substr(2, 5)}-${
-      headers.length
-    }`;
+    const headerId = `${Math.random().toString(36).substr(2, 5)}-${headers.length
+      }`;
 
     // level is h<level>
     const level = Number(matchedStr[matchedStr.indexOf('h') + 1]);
@@ -263,18 +215,24 @@ function generateToc(contentHtml: string) {
   const toc = headers
     .map(
       (header) =>
-        `<li class="toc-item toc-item-${header.level}" style="margin-left:${
-          (header.level - 1) * 20
+        `<li class="toc-item toc-item-${header.level}" style="margin-left:${(header.level - 1) * 20
         }px"><a href="#${header.id}">${header.header}</a></li>`,
     )
     .join('\n');
 
   const tocHTML = `
   <div class="toc-page" style="page-break-after: always;">
-    <h1 class="toc-header">Table of contents:</h1>
+    <h1 class="toc-header">目录:</h1>
     <ul class="toc-list">${toc}</ul>
   </div>
   `;
 
   return { modifiedContentHTML, tocHTML };
+}
+
+async function login(page: puppeteer.Page, username: string, password: string) {
+  if (username != "" && password != "") {
+    const auth = 'Basic ' + Buffer.from(username + ':' + password).toString('base64');
+    await page.setExtraHTTPHeaders({ Authorization: auth });
+  }
 }

@@ -3,7 +3,7 @@
 import chalk = require('chalk');
 import program = require('commander');
 
-import { generatePDF, generatePDFOptions } from './utils';
+import { generatePDF, generatePDFOptions } from '../core/utils';
 import {
   commaSeparatedList,
   generatePuppeteerPDFMargin,
