@@ -2,5 +2,6 @@
     "ops": {
         "username": "ones",
         "password": "ones@2023"
-    }
+    },
+    "temp_pdf_dir": "./pdf/"
 }

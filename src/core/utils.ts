@@ -2,7 +2,6 @@ import chalk = require('chalk');
 import puppeteer = require('puppeteer');
 import { scrollPageToBottom } from 'puppeteer-autoscroll-down';
 
-let contentHTML = '';
 export interface generatePDFOptions {
   initialDocURLs: Array<string>;
   excludeURLs: Array<string>;
@@ -14,11 +13,8 @@ export interface generatePDFOptions {
   excludeSelectors: Array<string>;
   cssStyle: string;
   puppeteerArgs: Array<string>;
-  coverTitle: string;
   coverImage: string;
   disableTOC: boolean;
-  coverSub: string;
-  waitForRender: number;
   headerTemplate: string;
   footerTemplate: string;
   username: string;
@@ -36,16 +32,14 @@ export async function generatePDF({
   excludeSelectors,
   cssStyle,
   puppeteerArgs,
-  coverTitle,
   coverImage,
   disableTOC,
-  coverSub,
-  waitForRender,
   headerTemplate,
   footerTemplate,
   username,
   password,
 }: generatePDFOptions): Promise<void> {
+  let contentHTML = '';
   const browser = await puppeteer.launch({ args: puppeteerArgs });
   const page = await browser.newPage();
 
